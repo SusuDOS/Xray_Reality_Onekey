@@ -25,7 +25,7 @@ ERROR="${Red}[ERROR]${Font}"
 
 # 变量
 shell_version="0.0.1"
-github_branch="main"
+github_branch="test"
 xray_conf_dir="/usr/local/etc/xray"
 website_dir="/www/xray_web/"
 xray_access_log="/var/log/xray/access.log"
@@ -136,13 +136,13 @@ function port_exist_check() {
 }
 
 function update_sh() {
-  ol_version=$(curl -L -s https://raw.githubusercontent.com/susudos/xray_reality_onekey/${github_branch}/install.sh | grep "shell_version=" | head -1 | awk -F '=|"' '{print $3}')
+  ol_version=$(curl -L -s https://raw.githubusercontent.com/susudos/xray_reality_onekey/${github_branch}/install_reality.sh | grep "shell_version=" | head -1 | awk -F '=|"' '{print $3}')
   if [[ "$shell_version" != "$(echo -e "$shell_version\n$ol_version" | sort -rV | head -1)" ]]; then
     print_ok "存在新版本，是否更新 [Y/N]?"
     read -r update_confirm
     case $update_confirm in
     [yY][eE][sS] | [yY])
-      wget -N --no-check-certificate https://raw.githubusercontent.com/susudos/xray_reality_onekey/${github_branch}/install.sh
+      wget -N --no-check-certificate https://raw.githubusercontent.com/susudos/xray_reality_onekey/${github_branch}/install_reality.sh
       print_ok "更新完成"
       print_ok "您可以通过 bash $0 执行本程序"
       exit 0
@@ -157,7 +157,7 @@ function update_sh() {
 
 function xray_tmp_config_file_check_and_use() {
   if [[ -s ${xray_conf_dir}/config_temp.json ]]; then
-    mv -f ${xray_conf_dir}/config_temp.json ${xray_conf_dir}/config.json
+    mv -f ${xray_conf_dir}/config_temp.json ${xray_conf_dir}/reality_config.json
   else
     print_error "xray 配置文件修改异常"
   fi
@@ -165,14 +165,14 @@ function xray_tmp_config_file_check_and_use() {
 
 function modify_privateKey() {
   PRIVATE_KEY=$(grep 'Private key:' /usr/local/etc/xray/KEY | cut -d ' ' -f 3)  
-  jq --arg newPrivateKey "$PRIVATE_KEY" '.inbounds[0].streamSettings.realitySettings.privateKey = $newPrivateKey' /usr/local/etc/xray/config.json > /usr/local/etc/xray/config_temp.json
+  jq --arg newPrivateKey "$PRIVATE_KEY" '.inbounds[0].streamSettings.realitySettings.privateKey = $newPrivateKey' /usr/local/etc/xray/reality_config.json > /usr/local/etc/xray/config_temp.json
   xray_tmp_config_file_check_and_use
   judge "Xray TCP privateKey 修改"
 }
 
 function modify_shortIds() {
   newShortIds=$(xray uuid | awk -F"-" '{print $NF}')
-  jq --arg newShortIds "$newShortIds" '.inbounds[0].streamSettings.realitySettings.shortIds[0] = $newShortIds' /usr/local/etc/xray/config.json > /usr/local/etc/xray/config_temp.json
+  jq --arg newShortIds "$newShortIds" '.inbounds[0].streamSettings.realitySettings.shortIds[0] = $newShortIds' /usr/local/etc/xray/reality_config.json > /usr/local/etc/xray/config_temp.json
   xray_tmp_config_file_check_and_use
   judge "Xray TCP shortIds 修改"
 }
@@ -182,7 +182,7 @@ function modify_UUID() {
   if [[ -z "$UUID" ]]; then
     UUID=$(xray uuid)
   fi
-  jq --arg newId "$UUID" '.inbounds[0].settings.clients[0].id = $newId' /usr/local/etc/xray/config.json > /usr/local/etc/xray/config_temp.json
+  jq --arg newId "$UUID" '.inbounds[0].settings.clients[0].id = $newId' /usr/local/etc/xray/reality_config.json > /usr/local/etc/xray/config_temp.json
   xray_tmp_config_file_check_and_use
   judge "Xray TCP UUID 修改"
 }
@@ -196,13 +196,13 @@ function modify_port() {
   fi
   port_exist_check $PORT
 
-  jq --argjson newPort "$PORT" '.inbounds[0].port = $newPort' /usr/local/etc/xray/config.json > /usr/local/etc/xray/config_temp.json
+  jq --argjson newPort "$PORT" '.inbounds[0].port = $newPort' /usr/local/etc/xray/reality_config.json > /usr/local/etc/xray/config_temp.json
   xray_tmp_config_file_check_and_use
   judge "Xray 端口 修改"
 }
 
 function configure_xray() {
-  cd /usr/local/etc/xray && rm -f config.json && wget -O config.json https://raw.githubusercontent.com/susudos/xray_reality_onekey/${github_branch}/config/reality_config.json  
+  cd /usr/local/etc/xray && rm -f reality_config.json && wget -O reality_config.json https://raw.githubusercontent.com/susudos/xray_reality_onekey/${github_branch}/config/reality_config.json  
   modify_UUID
   modify_port
   modify_shortIds
@@ -237,13 +237,13 @@ function vless_reality_information() {
   local_ipv4=$(curl -s4m8 http://ip.gs)
   cat /usr/local/etc/xray/KEY
   echo
-  jq --arg address "$local_ipv4" '.inbounds[0] | {address: $address, port, "id": .settings.clients[0].id, serverNames: .streamSettings.realitySettings.serverNames, privateKey: .streamSettings.realitySettings.privateKey, shortIds: .streamSettings.realitySettings.shortIds}' /usr/local/etc/xray/config.json
+  jq --arg address "$local_ipv4" '.inbounds[0] | {address: $address, port, "id": .settings.clients[0].id, serverNames: .streamSettings.realitySettings.serverNames, privateKey: .streamSettings.realitySettings.privateKey, shortIds: .streamSettings.realitySettings.shortIds}' /usr/local/etc/xray/reality_config.json
 
   print_ok "-------------------------------------------------"
   echo
 
   PUBLIC_KEY=$(grep 'Public key:' /usr/local/etc/xray/KEY | cut -d ' ' -f 3)
-  config_info=$(jq --arg address "$local_ipv4" --arg PUBLIC_KEY "$PUBLIC_KEY" '.inbounds[0] | {address: $address, port, id: .settings.clients[0].id, serverNames: .streamSettings.realitySettings.serverNames, privateKey: $PUBLIC_KEY, shortIds: .streamSettings.realitySettings.shortIds}' /usr/local/etc/xray/config.json)
+  config_info=$(jq --arg address "$local_ipv4" --arg PUBLIC_KEY "$PUBLIC_KEY" '.inbounds[0] | {address: $address, port, id: .settings.clients[0].id, serverNames: .streamSettings.realitySettings.serverNames, privateKey: $PUBLIC_KEY, shortIds: .streamSettings.realitySettings.shortIds}' /usr/local/etc/xray/reality_config.json)
 
   vless_url="vless://$(echo "$config_info" | jq -r '.id')@$(echo "$config_info" | jq -r '.address'):$(echo "$config_info" | jq -r '.port')?encryption=none&flow=xtls-rprx-vision&security=reality&sni=$(echo "$config_info" | jq -r '.serverNames[1]')&fp=chrome&pbk=$(echo "$config_info" | jq -r '.privateKey')&sid=$(echo "$config_info" | jq -r '.shortIds[0]')&spx=%2F&type=tcp&headerType=none#VLESS_TCP_REALITY"
 
@@ -278,6 +278,33 @@ function install_xray() {
   basic_information
 }
 
+function configure_xray_service_dir() {
+    # 定义要使用的配置目录
+    local CONFIG_DIR="/usr/local/etc/xray/"
+
+    # 定义服务文件路径
+    local SERVICE_FILE="/etc/systemd/system/xray.service"
+
+    # 停止并禁用 xray 服务
+    echo "停止 xray 服务..."
+    sudo systemctl stop xray || { echo "停止 xray 服务失败。"; exit 1; }
+    sudo systemctl disable xray || { echo "禁用 xray 服务失败。"; exit 1; }
+
+    # 使用 sed 修改 ExecStart 行，将其更改为使用 -confdir 参数
+    echo "修改 xray.service 配置为文件夹路径..."
+    sudo sed -i "s|^ExecStart=.*|ExecStart=/usr/local/bin/xray run -confdir $CONFIG_DIR|g" "$SERVICE_FILE" || { echo "修改 ExecStart 失败。"; exit 1; }
+
+    # 重新加载 systemd 守护进程
+    sudo systemctl daemon-reload || { echo "重新加载 systemd 守护进程失败。"; exit 1; }
+
+    # 启用并启动 xray 服务
+    echo "启用并启动 xray 服务..."
+    sudo systemctl enable xray || { echo "启用 xray 服务失败。"; exit 1; }
+    sudo systemctl start xray || { echo "启动 xray 服务失败。"; exit 1; }
+
+    echo "xray.service 已成功配置为从目录 $CONFIG_DIR 加载配置文件。"
+}
+
 function menu() {
   update_sh
   echo -e "\t Xray 安装管理脚本 ${Red}[${shell_version}]${Font}"
@@ -293,6 +320,7 @@ function menu() {
   echo -e "${Green}21.${Font} 查看 实时访问日志"
   echo -e "${Green}22.${Font} 查看 实时错误日志"
   echo -e "${Green}23.${Font} 查看 Xray 配置链接"
+  echo -e "${Green}24.${Font} 修改配置为文件夹路径"
   echo -e "—————————————— 其他选项 ——————————————"
   echo -e "${Green}31.${Font} 安装 4 合 1 BBR、锐速安装脚本"
   echo -e "${Green}32.${Font} 更新 Xray-core"
@@ -321,11 +349,14 @@ function menu() {
     tail -f $xray_error_log
     ;;
   23)
-    if [[ -f $xray_conf_dir/config.json ]]; then
+    if [[ -f $xray_conf_dir/reality_config.json ]]; then
       basic_information
     else
       print_error "xray 配置文件不存在"
     fi
+    ;;
+  24)
+    configure_xray_service_dir
     ;;
   31)
     bbr_boost_sh

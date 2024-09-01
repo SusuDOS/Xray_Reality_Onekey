@@ -4,7 +4,6 @@
 # xray版本大于1.8.0
 #====================================================
 
-
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 stty erase ^?
 
@@ -85,7 +84,6 @@ function dependency_install() {
   ${INS} curl
   judge "安装 curl"
 
-
   ${INS} systemd
   judge "安装/升级 systemd"
 
@@ -93,7 +91,6 @@ function dependency_install() {
     ${INS} pcre pcre-devel zlib-devel epel-release openssl openssl-devel
   elif [[ "${ID}" == "ol" ]]; then
     ${INS} pcre pcre-devel zlib-devel openssl openssl-devel
-    # Oracle Linux 不同日期版本的 VERSION_ID 比较乱 直接暴力处理。如出现问题或有更好的方案，请提交 Issue。
     yum-config-manager --enable ol7_developer_EPEL >/dev/null 2>&1
     yum-config-manager --enable ol8_developer_EPEL >/dev/null 2>&1
   else
@@ -112,19 +109,16 @@ function dependency_install() {
 }
 
 function basic_optimization() {
-  # 最大文件打开数
   sed -i '/^\*\ *soft\ *nofile\ *[[:digit:]]*/d' /etc/security/limits.conf
   sed -i '/^\*\ *hard\ *nofile\ *[[:digit:]]*/d' /etc/security/limits.conf
   echo '* soft nofile 65536' >>/etc/security/limits.conf
   echo '* hard nofile 65536' >>/etc/security/limits.conf
 
-  # RedHat 系发行版关闭 SELinux
   if [[ "${ID}" == "centos" || "${ID}" == "ol" ]]; then
     sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config
     setenforce 0
   fi
 }
-
 
 function port_exist_check() {
   if [[ 0 -eq $(lsof -i:"$1" | grep -i -c "listen") ]]; then
@@ -176,8 +170,6 @@ function modify_privateKey() {
   judge "Xray TCP privateKey 修改"
 }
 
-
-
 function modify_shortIds() {
   newShortIds=$(xray uuid | awk -F"-" '{print $NF}')
   jq --arg newShortIds "$newShortIds" '.inbounds[0].streamSettings.realitySettings.shortIds[0] = $newShortIds' /usr/local/etc/xray/config.json > /usr/local/etc/xray/config_temp.json
@@ -186,8 +178,11 @@ function modify_shortIds() {
 }
 
 function modify_UUID() {
-  newId=$(xray uuid)
-  jq --arg newId "$newId" '.inbounds[0].settings.clients[0].id = $newId' /usr/local/etc/xray/config.json > /usr/local/etc/xray/config_temp.json
+  read -rp "请输入新的 UUID（留空则自动生成）:" UUID
+  if [[ -z "$UUID" ]]; then
+    UUID=$(xray uuid)
+  fi
+  jq --arg newId "$UUID" '.inbounds[0].settings.clients[0].id = $newId' /usr/local/etc/xray/config.json > /usr/local/etc/xray/config_temp.json
   xray_tmp_config_file_check_and_use
   judge "Xray TCP UUID 修改"
 }
@@ -201,7 +196,7 @@ function modify_port() {
   fi
   port_exist_check $PORT
 
-  jq --arg newPort "$PORT" '.inbounds[0].port = $newPort' /usr/local/etc/xray/config.json > /usr/local/etc/xray/config_temp.json
+  jq --argjson newPort "$PORT" '.inbounds[0].port = $newPort' /usr/local/etc/xray/config.json > /usr/local/etc/xray/config_temp.json
   xray_tmp_config_file_check_and_use
   judge "Xray 端口 修改"
 }
@@ -214,7 +209,6 @@ function configure_xray() {
   modify_privateKey
 }
 
-
 function xray_install() {
   print_ok "安装 Xray"
   bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install -u root
@@ -222,12 +216,9 @@ function xray_install() {
 
   PRIVATE_KEY=$(grep 'Private key:' /usr/local/etc/xray/KEY | cut -d ' ' -f 3)
   PUBLIC_KEY=$(grep 'Public key:' /usr/local/etc/xray/KEY | cut -d ' ' -f 3)
-
-  # echo "$PRIVATE_KEY"
-  # echo "$PUBLIC_KEY"
+  
   judge "Xray 安装"
 }
-
 
 function xray_uninstall() {
   curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh | bash -s -- remove --purge
@@ -240,7 +231,6 @@ function restart_all() {
   systemctl stop xray && systemctl start xray 
   judge "Xray 启动"
 }
-
 
 function vless_reality_information() {
   echo -e "${Red} Xray 配置信息 ${Font}"  
@@ -264,7 +254,6 @@ function vless_reality_information() {
 function basic_information() {
   print_ok "VLESS+TCP+REALITY 安装成功"
   vless_reality_information
-  
 }
 
 function show_access_log() {
@@ -289,14 +278,14 @@ function install_xray() {
   basic_information
 }
 
-menu() {
+function menu() {
   update_sh
   echo -e "\t Xray 安装管理脚本 ${Red}[${shell_version}]${Font}"
 
   echo -e "当前已安装版本：${shell_mode}"
   echo -e "—————————————— 安装向导 ——————————————"""
   echo -e "${Green}0.${Font}  升级 脚本"
-  echo -e "${Green}1.${Font}  安装 Xray (VLESS + TCP + REALITY),若国内转发不允许为一个网页端口,不能使用."
+  echo -e "${Green}1.${Font}  安装 Xray (VLESS + TCP + REALITY)"
   echo -e "—————————————— 配置变更 ——————————————"
   echo -e "${Green}11.${Font} 变更 UUID"
   echo -e "${Green}12.${Font} 变更 连接端口"
@@ -318,7 +307,6 @@ menu() {
     install_xray
     ;;
   11)
-    read -rp "请输入 UUID:" UUID
     modify_UUID
     restart_all
     ;;
@@ -350,10 +338,6 @@ menu() {
     source '/etc/os-release'
     xray_uninstall
     ;;
-  34)
-    bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" - install
-    restart_all
-    ;;
   40)
     exit 0
     ;;
@@ -362,4 +346,5 @@ menu() {
     ;;
   esac
 }
+
 menu "$@"

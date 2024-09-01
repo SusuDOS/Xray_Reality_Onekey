@@ -46,6 +46,8 @@ Nginx 目录： `/etc/nginx`
 
 - VLESS + TCP + REALITY 
 
+该方式无需域名，支持严格的(域名)白名单区域.
+
 ```
 wget -N --no-check-certificate -q -O install_reality.sh "https://raw.githubusercontent.com/susudos/Xray_Reality_Onekey/main/install_reality.sh" && chmod +x install_reality.sh && bash install_reality.sh
 ```

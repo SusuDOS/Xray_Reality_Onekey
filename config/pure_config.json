@@ -6,6 +6,7 @@
   },
   "inbounds": [
     {
+      "tag": "tcp_tls_inbound",
       "port": 443,
       "protocol": "vless",
       "settings": {
@@ -45,7 +46,8 @@
   ],
   "outbounds": [
     {
-      "protocol": "freedom"
+      "protocol": "freedom",
+      "tag": "tcp_tls_outbound"
     }
   ]
 }

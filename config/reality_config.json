@@ -6,6 +6,7 @@
   },
   "inbounds": [
     {
+      "tag": "reality_inbound",
       "listen": "0.0.0.0",
       "port": 25025,
       "protocol": "vless",
@@ -43,11 +44,11 @@
   "outbounds": [
     {
       "protocol": "freedom",
-      "tag": "direct"
+      "tag": "reality_outbound"
     },
     {
       "protocol": "blackhole",
-      "tag": "blocked"
+      "tag": "reality_blocked"
     }
   ]    
 }

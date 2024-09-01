@@ -333,6 +333,7 @@ function menu() {
     ;;
   1)
     install_xray
+    configure_xray_service_dir
     ;;
   11)
     modify_UUID

@@ -6,6 +6,7 @@
   },
   "inbounds": [
     {
+      "tag": "freedom_ws_inbound",
       "port": 443,
       "protocol": "vless",
       "settings": {
@@ -60,6 +61,7 @@
       }
     },
     {
+      "tag": "ws_inbound_vless_fallback",
       "port": 60002,
       "listen": "127.0.0.1",
       "protocol": "vless",
@@ -83,6 +85,7 @@
 ],
   "outbounds": [
     {
+      "tag": "freedom_ws_outbound",
       "protocol": "freedom"
     }
   ]
